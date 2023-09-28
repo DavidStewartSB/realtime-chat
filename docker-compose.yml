@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      dockerfile: Dockerfile
+      context: ./api
+      target: development
+    volumes:
+      - ./api:/project/src/app
+      - /project/src/app/node_modules/
+    # RUN in debug mode: npm run start:debug --> Also start your vscode debugger
+    # Run in dev mode: npm run start:dev
+    command: npm run start:debug
+    depends_on: 
+      - mysql
+    environment:
+      DATABASE_URL: mysql://user:password@mysql:3306/db
+      NODE_ENV: development
+      JWT_SECRET: hard_to_guess_secret_123
+      PORT: 3000
+    ports:
+      - 3000:3000
+      - 9229:9229
+  
+  # Our Angular Frontend
+  frontend:
+    build:
+      dockerfile: Dockerfile
+      context: ./frontend
+      target: development
+    command: npm run start
+    volumes:
+      - ./frontend:/project/frontend/src/app
+      - /project/frontend/src/app/node_modules
+    ports:
+      - 4200:4200
+    links:
+      - api
+
+  # Our MySQL Database for NestJS to connect to
+mysql:
+  image: mysql:latest
+  environment:
+    MYSQL_ROOT_PASSWORD: root_password
+    MYSQL_DATABASE: realtime_chat
+    MYSQL_USER: root
+    MYSQL_PASSWORD: password
+  ports:
+    - 35000:3306
+
+# The PhpMyAdmin tool if we want to run some custom queries and so on against our Database
+mysql_admin:
+  image: phpmyadmin/phpmyadmin
+  depends_on: 
+    - mysql
+  environment:
+    PMA_ARBITRARY: 1
+    MYSQL_HOST: mysql
+    MYSQL_PORT: 3306
+    MYSQL_ROOT_PASSWORD: root_password
+  ports:
+    - 5050:80
